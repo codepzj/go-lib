@@ -13,7 +13,7 @@ import (
 var logger *zap.Logger
 
 type Option struct {
-	Type       string // text, json
+	Format     string // text, json
 	Level      string // 日志级别
 	LogFile    string // 日志路径
 	MaxSize    int    // 日志文件最大(MB)
@@ -24,7 +24,7 @@ type Option struct {
 
 func NewLogger(opt *Option) {
 	var encoder zapcore.Encoder
-	if opt.Type == "text" {
+	if opt.Format == "text" {
 		encoder = zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
 	} else {
 		encoder = zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
@@ -33,7 +33,7 @@ func NewLogger(opt *Option) {
 	core := zapcore.NewCore(encoder, getLogWriter(opt), parseLogLevel(opt.Level))
 
 	logger = zap.New(core)
-	log.Printf("Logger init success[%s]...\n", opt.Type)
+	log.Printf("Logger init success[%s]...\n", opt.Format)
 }
 
 func parseLogLevel(level string) zapcore.Level {
