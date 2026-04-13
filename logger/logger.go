@@ -2,24 +2,24 @@ package logger
 
 import (
 	"io"
-	"log"
 	"os"
+	"time"
 
+	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-var logger *zap.Logger
+var (
+	logger *zap.Logger
+)
 
 type Option struct {
-	Format     string // text, json
-	Level      string // 日志级别
-	LogFile    string // 日志路径
-	MaxSize    int    // 日志文件最大(MB)
-	MaxBackups int    // 归档文件最大保留数目
-	MaxAge     int    // 归档文件最大保留时间(天)
-	Compress   bool   // 是否压缩
+	Format   string // text, json
+	Level    string // 日志级别
+	LogFile  string // 日志路径
+	Maxage   int    // 归档文件最大保留天数
+	Compress bool   // 是否压缩归档文件
 }
 
 func NewLogger(opt *Option) {
@@ -33,7 +33,7 @@ func NewLogger(opt *Option) {
 	core := zapcore.NewCore(encoder, getLogWriter(opt), parseLogLevel(opt.Level))
 
 	logger = zap.New(core)
-	log.Printf("Logger init success[%s]...\n", opt.Format)
+	logger.Info("Logger init success", zap.String("format", opt.Format))
 }
 
 func parseLogLevel(level string) zapcore.Level {
@@ -51,14 +51,16 @@ func parseLogLevel(level string) zapcore.Level {
 }
 
 func getLogWriter(opt *Option) zapcore.WriteSyncer {
-	logger := &lumberjack.Logger{
-		Filename:   opt.LogFile,
-		MaxSize:    opt.MaxSize,
-		MaxBackups: opt.MaxBackups,
-		MaxAge:     opt.MaxAge,
-		Compress:   opt.Compress,
+	writer, err := rotatelogs.New(
+		opt.LogFile+".%Y%m%d",
+		rotatelogs.WithLinkName(opt.LogFile),                          // 软链接
+		rotatelogs.WithRotationTime(24*time.Hour),                     // 按天切割日志
+		rotatelogs.WithMaxAge(time.Duration(opt.Maxage)*24*time.Hour), // 最大保留时间
+	)
+	if err != nil {
+		panic(err)
 	}
-	ws := io.MultiWriter(logger, os.Stdout)
+	ws := io.MultiWriter(writer, os.Stdout)
 	return zapcore.AddSync(ws)
 }
 
@@ -80,4 +82,8 @@ func Warn(msg string, fields ...zap.Field) {
 
 func Error(msg string, fields ...zap.Field) {
 	logger.Error(msg, fields...)
+}
+
+func Sync() {
+	logger.Sync()
 }
