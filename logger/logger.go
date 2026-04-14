@@ -15,11 +15,10 @@ var (
 )
 
 type Option struct {
-	Format   string // text, json
-	Level    string // 日志级别
-	LogFile  string // 日志路径
-	Maxage   int    // 归档文件最大保留天数
-	Compress bool   // 是否压缩归档文件
+	Format  string // text, json
+	Level   string // 日志级别
+	LogFile string // 日志路径
+	Maxage  int    // 归档文件最大保留天数
 }
 
 func NewLogger(opt *Option) {
@@ -53,9 +52,9 @@ func parseLogLevel(level string) zapcore.Level {
 func getLogWriter(opt *Option) zapcore.WriteSyncer {
 	writer, err := rotatelogs.New(
 		opt.LogFile+".%Y%m%d",
-		rotatelogs.WithLinkName(opt.LogFile),                          // 软链接
-		rotatelogs.WithRotationTime(24*time.Hour),                     // 按天切割日志
-		rotatelogs.WithMaxAge(time.Duration(opt.Maxage)*24*time.Hour), // 最大保留时间
+		rotatelogs.WithLinkName(opt.LogFile),           // 软链接
+		rotatelogs.WithRotationTime(24*time.Hour),      // 按天切割日志
+		rotatelogs.WithRotationCount(uint(opt.Maxage)), // 最大保留数量
 	)
 	if err != nil {
 		panic(err)
