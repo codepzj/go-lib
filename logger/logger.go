@@ -18,7 +18,7 @@ type Option struct {
 	Format  string // text, json
 	Level   string // 日志级别
 	LogFile string // 日志路径
-	Maxage  int    // 归档文件最大保留天数
+	MaxAge  int    // 归档文件最大保留天数
 }
 
 func NewLogger(opt *Option) {
@@ -54,7 +54,7 @@ func getLogWriter(opt *Option) zapcore.WriteSyncer {
 		opt.LogFile+".%Y%m%d",
 		rotatelogs.WithLinkName(opt.LogFile),           // 软链接
 		rotatelogs.WithRotationTime(24*time.Hour),      // 按天切割日志
-		rotatelogs.WithRotationCount(uint(opt.Maxage)), // 最大保留数量
+		rotatelogs.WithRotationCount(uint(opt.MaxAge)), // 最大保留数量
 	)
 	if err != nil {
 		panic(err)
