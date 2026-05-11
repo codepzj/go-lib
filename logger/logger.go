@@ -14,14 +14,9 @@ var (
 	logger *zap.Logger
 )
 
-type Option struct {
-	Format  string // text, json
-	Level   string // 日志级别
-	LogFile string // 日志路径
-	MaxAge  int    // 归档文件最大保留天数
-}
-
 func NewLogger(opt *Option) {
+	opt = withDefault(opt)
+
 	var encoder zapcore.Encoder
 	if opt.Format == "text" {
 		encoder = zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
@@ -32,33 +27,38 @@ func NewLogger(opt *Option) {
 	core := zapcore.NewCore(encoder, getLogWriter(opt), parseLogLevel(opt.Level))
 
 	logger = zap.New(core)
-	logger.Info("Logger init success", zap.String("format", opt.Format))
+	logger.Info("Logger init success", zap.String("format", string(opt.Format)))
 }
 
-func parseLogLevel(level string) zapcore.Level {
+func parseLogLevel(level LogLevel) zapcore.Level {
 	switch level {
-	case "debug":
+	case DEBUG:
 		return zapcore.DebugLevel
-	case "info":
+	case INFO:
 		return zapcore.InfoLevel
-	case "warn":
+	case WARN:
 		return zapcore.WarnLevel
-	case "error":
+	case ERROR:
 		return zapcore.ErrorLevel
 	}
 	return zapcore.InfoLevel
 }
 
 func getLogWriter(opt *Option) zapcore.WriteSyncer {
+	if !opt.Output.EnableFile {
+		return zapcore.AddSync(os.Stdout)
+	}
+
 	writer, err := rotatelogs.New(
-		opt.LogFile+".%Y%m%d",
-		rotatelogs.WithLinkName(opt.LogFile),           // 软链接
-		rotatelogs.WithRotationTime(24*time.Hour),      // 按天切割日志
-		rotatelogs.WithRotationCount(uint(opt.MaxAge)), // 最大保留数量
+		opt.Output.FilePath+".%Y%m%d",
+		rotatelogs.WithLinkName(opt.Output.FilePath),                         // 软链接
+		rotatelogs.WithRotationTime(24*time.Hour),                            // 按天切割日志
+		rotatelogs.WithMaxAge(time.Duration(opt.Output.MaxAge)*24*time.Hour), // 最大保留天数
 	)
 	if err != nil {
 		panic(err)
 	}
+
 	ws := io.MultiWriter(writer, os.Stdout)
 	return zapcore.AddSync(ws)
 }
